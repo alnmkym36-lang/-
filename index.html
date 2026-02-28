@@ -32,6 +32,22 @@
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             --radius: 12px;
+            --hero-gradient: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+            --white-fixed: #FFFFFF;
+            --pos-bg: #111827;
+            --header-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        body.dark {
+            --bg-light: #0f172a;
+            --white: #1e293b;
+            --text-dark: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --hero-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --pos-bg: #1e293b;
+            --header-bg: rgba(15, 23, 42, 0.9);
+            background-color: #0f172a;
         }
 
         * {
@@ -107,7 +123,7 @@
         header {
             position: sticky;
             top: 0;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--header-bg);
             backdrop-filter: blur(10px);
             z-index: 1000;
             border-bottom: 1px solid var(--border);
@@ -129,7 +145,7 @@
 
         /* Hero */
         .hero {
-            background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+            background: var(--hero-gradient);
             padding: 100px 0 80px;
             position: relative;
         }
@@ -287,11 +303,12 @@
 
         /* POS Section */
         .pos-section {
-            background: var(--text-dark);
-            color: var(--white);
+            background: var(--pos-bg);
+            color: var(--white-fixed);
             border-radius: 32px;
             padding: 60px;
             margin: 40px 0;
+            border: 1px solid var(--border);
         }
 
         .pos-grid {
@@ -435,6 +452,7 @@
                 <span>محلك</span>
             </a>
             <div class="flex gap-4 items-center">
+                <button id="themeToggle" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.9rem;">🌙</button>
                 <button id="langSwitcher" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.9rem;">EN</button>
                 <a href="https://m7lk.com/store" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;" data-i18n="header-browse">تصفح المتاجر</a>
                 <a href="#signup" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9rem;" data-i18n="header-sell">ابدأ البيع الآن</a>
@@ -674,7 +692,7 @@
     </section>
 
     <!-- Vision -->
-    <section class="section-padding" style="background: var(--primary); color: var(--white);">
+    <section class="section-padding" style="background: var(--primary); color: var(--white-fixed);">
         <div class="container text-center">
             <h2 style="font-size: 2.5rem; margin-bottom: 24px;" data-i18n="vision-title">رؤيتنا: نقل سوق جرجا للعالم الرقمي</h2>
             <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; margin-top: 40px;">
@@ -1099,6 +1117,23 @@
 
         let currentLang = 'ar';
 
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+        
+        // Check for saved theme
+        if (localStorage.getItem('theme') === 'dark') {
+            body.classList.add('dark');
+            themeToggle.innerText = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            const isDark = body.classList.contains('dark');
+            themeToggle.innerText = isDark ? '☀️' : '🌙';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
         function switchLanguage(lang) {
             currentLang = lang;
             const html = document.getElementById('html-tag');
@@ -1134,26 +1169,53 @@
         document.getElementById('leadForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
+            const formData = new FormData(this);
+            const data = {
+                name: formData.get('name'),
+                phone: formData.get('phone'),
+                store: formData.get('store_name'),
+                category: formData.get('category'),
+                delivery: formData.get('delivery')
+            };
+
             // Analytics Hook
             console.log('Lead submission started', {
                 formId: this.id,
                 lang: currentLang,
+                data: data,
                 timestamp: new Date().toISOString()
             });
 
-            // Simulate API call
+            // Simulate UI feedback
             const submitBtn = this.querySelector('button');
             const originalText = submitBtn.innerText;
             submitBtn.innerText = translations[currentLang]['form-submitting'];
             submitBtn.disabled = true;
 
+            // Construct Gmail URL
+            const recipient = 'alnmkym36@gmail.com';
+            const subject = encodeURIComponent(`طلب انضمام جديد - ${data.store}`);
+            const bodyContent = encodeURIComponent(
+                `بيانات التاجر الجديد:\n\n` +
+                `الاسم: ${data.name}\n` +
+                `رقم الهاتف: ${data.phone}\n` +
+                `اسم المتجر: ${data.store}\n` +
+                `النشاط: ${data.category}\n` +
+                `خدمة التوصيل: ${data.delivery === 'yes' ? 'نعم' : 'لا'}\n\n` +
+                `تم الإرسال عبر محلك.كوم`
+            );
+            
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${recipient}&su=${subject}&body=${bodyContent}`;
+
             setTimeout(() => {
                 this.style.display = 'none';
                 document.getElementById('successMessage').style.display = 'block';
                 
-                // Analytics Hook
-                console.log('Lead submission successful');
-            }, 1500);
+                // Redirect to Gmail
+                window.open(gmailUrl, '_blank');
+                
+                console.log('Lead submission successful and redirected to Gmail');
+            }, 1000);
         });
 
         // Smooth Scroll
